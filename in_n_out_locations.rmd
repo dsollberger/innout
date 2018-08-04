@@ -1,0 +1,75 @@
+---
+title: "In_n_Out_locations"
+author: "Derek Sollberger"
+date: "August 3, 2018"
+output: html_document
+---
+
+One of my long-standing goals has been to produce a map of all of the In-n-Out locations that I have visited.  From taking Rich Majarus' course on DataCamp---[Interactive Maps with leaflet in R](https://www.datacamp.com/courses/interactive-maps-with-leaflet-in-r)---I realized that his package will make this task easy once I get longitude and latitude data.
+
+Furthermore fortunately, a Cal State Northridge student named Po Chun Rich Lee wrote a thesis called *[The Expansion of In-n-Out Burger](http://www.csun.edu/~pl273965/698/RichLee_Thesis.pdf)*, which contained such longitude and latitude data for most of the locations!  This data goes up to the year 2010, but it is a great place to start.
+
+Today I hope to extract the table of In-n-Out locations from Po Chun Rich Lee's thesis into an easy-to-use .csv file.
+
+# Using tabulizer
+
+(from:  http://bxhorn.com/2016/extract-data-tables-from-pdf-files-in-r/)
+
+These `tabulizer` packages required 64-bit Java installation.
+
+```{r, message = FALSE, warning = FALSE}
+library(tabulizer)
+library(tabulizerjars)
+```
+
+These libraries have functions that allow us to extract the tables from the PDF.  From there, I looked at the data and determined that the table I wanted to start with the 18th in the list.
+
+```{r, eval = FALSE}
+pdf_file <- "RichLee_Thesis.pdf"
+pdf_data <- extract_tables(pdf_file)
+in_n_out_df <- pdf_data[[18]][2:46,]
+colnames(in_n_out_df) <- pdf_data[[18]][1,]
+head(in_n_out_df)
+```
+
+Now I will write the data to a .csv file.
+
+```{r, eval = FALSE}
+write.csv(in_n_out_df, "in_n_out_df_draft.csv")
+```
+
+# Personalization
+
+At this point, I made a column in the spreadsheet called "visited", and populated it with TRUE or FALSE values.
+
+# Leaflet
+
+Now I hope to bring the data back in and load it into a `leaflet` app.
+
+```{r, message = FALSE, warning = FALSE}
+library(leaflet)
+library(readxl)
+library(tidyverse)
+in_n_out_df <- read_excel("in_n_out_df.xlsx")
+```
+
+```{r}
+visited <- in_n_out_df %>% filter(visited)
+not_visited <- in_n_out_df %>% filter(!visited)
+
+in_n_out_df %>%
+  leaflet() %>%
+  addTiles() %>%
+  addProviderTiles("Esri") %>%
+  addCircleMarkers(data = visited, 
+                   color = 'red',
+                   group = "visited",
+                   popup = ~paste0(City, "<br/>", "(visited)")) %>%
+  addCircleMarkers(data = not_visited, 
+                   color = 'yellow',
+                   group = "yet to visit",
+                   popup = ~paste0(City, "<br/>", "(yet to visit)")) %>%
+  addLayersControl(overlayGroups = c("visited", "yet to visit"))
+```
+
+
